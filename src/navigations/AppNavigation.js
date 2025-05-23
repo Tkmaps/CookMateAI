@@ -1,21 +1,29 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
-import { createDrawerNavigator } from '@react-navigation/drawer';
 import HomeScreen from '../screens/Home/HomeScreen';
 import CategoriesScreen from '../screens/Categories/CategoriesScreen';
 import RecipeScreen from '../screens/Recipe/RecipeScreen';
 import RecipesListScreen from '../screens/RecipesList/RecipesListScreen';
-import DrawerContainer from '../screens/DrawerContainer/DrawerContainer';
 import IngredientScreen from '../screens/Ingredient/IngredientScreen';
 import SearchScreen from '../screens/Search/SearchScreen';
 import IngredientsDetailsScreen from '../screens/IngredientsDetails/IngredientsDetailsScreen';
+import ProfileScreen from '../screens/Profile/ProfileScreen';
+import ScanReceiptScreen from '../screens/GroceryList/ScanReceiptScreen';
+import SplashScreen from '../screens/Splash/SplashScreen';
+import MealPlannerScreen from '../screens/MealPlanner/MealPlannerScreen';
+import RecommendationsScreen from '../screens/Recommendations/RecommendationsScreen';
+import RecipeScannerScreen from '../screens/Recipe/RecipeScannerScreen';
+import RecipeResultsScreen from '../screens/Recipe/RecipeResultsScreen';
+import PointAndGenerateScreen from '../screens/Recipe/PointAndGenerateScreen';
+import TabNavigator from './TabNavigator';
 
 const Stack = createStackNavigator();
 
 function MainNavigator() {
   return (
     <Stack.Navigator
+      initialRouteName="Splash"
       screenOptions={{
         headerTitleStyle: {
           fontWeight: 'bold',
@@ -23,39 +31,50 @@ function MainNavigator() {
         headerTitleAlign: 'center',
       }}
     >
-      <Stack.Screen name='Home' component={HomeScreen} />
+      <Stack.Screen 
+        name='Splash' 
+        component={SplashScreen} 
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name='TabHome' 
+        component={TabNavigator} 
+        options={{ headerShown: false }}
+      />
       <Stack.Screen name='Categories' component={CategoriesScreen}/>
       <Stack.Screen name='Recipe' component={RecipeScreen}/>
       <Stack.Screen name='RecipesList' component={RecipesListScreen} />
       <Stack.Screen name='Ingredient' component={IngredientScreen} />
       <Stack.Screen name='Search' component={SearchScreen} />
       <Stack.Screen name='IngredientsDetails' component={IngredientsDetailsScreen} />
+      <Stack.Screen name='Profile' component={ProfileScreen} options={{ title: 'Your Profile' }} />
+      <Stack.Screen name='ScanReceipt' component={ScanReceiptScreen} options={{ title: 'Scan Receipt' }} />
+      <Stack.Screen name='MealPlanner' component={MealPlannerScreen} options={{ title: 'Meal Planner' }} />
+      <Stack.Screen name='Recommendations' component={RecommendationsScreen} options={{ title: 'For You' }} />
+      <Stack.Screen name='Home' component={HomeScreen} />
+      <Stack.Screen 
+        name='RecipeScanner' 
+        component={RecipeScannerScreen} 
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name='PointAndGenerate' 
+        component={PointAndGenerateScreen} 
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name='RecipeResults' 
+        component={RecipeResultsScreen} 
+        options={{ headerShown: false }} 
+      />
     </Stack.Navigator>
-  );
-}
-
-const Drawer = createDrawerNavigator();
-
-function DrawerStack() {
-  return (
-    <Drawer.Navigator
-      screenOptions={{
-        headerShown: false,
-        drawerStyle: {
-          width: 250, 
-        },
-      }}
-      drawerContent={({navigation}) => <DrawerContainer navigation={navigation}/>}
-    >
-      <Drawer.Screen name='Main' component={MainNavigator} />
-    </Drawer.Navigator>
   );
 }
 
 export default function AppContainer() {
   return (
     <NavigationContainer>
-      <DrawerStack/>
+      <MainNavigator />
     </NavigationContainer>
   );
 }
