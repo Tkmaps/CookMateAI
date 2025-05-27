@@ -20,6 +20,38 @@ import TabNavigator from './TabNavigator';
 
 const Stack = createStackNavigator();
 
+const linking = {
+  prefixes: ['cookmateai://'],
+  config: {
+    screens: {
+      Splash: 'splash',
+      TabHome: {
+        path: 'home',
+        screens: {
+          Home: 'main',
+          Categories: 'categories',
+          Search: 'search',
+          Profile: 'profile',
+          MealPlanner: 'meal-planner',
+        },
+      },
+      Categories: 'categories',
+      Recipe: 'recipe/:recipeId',
+      RecipesList: 'recipes-list/:categoryId',
+      Ingredient: 'ingredient/:ingredientId',
+      Search: 'search',
+      IngredientsDetails: 'ingredient-details/:ingredientId',
+      Profile: 'profile',
+      ScanReceipt: 'scan-receipt',
+      MealPlanner: 'meal-planner',
+      Recommendations: 'recommendations',
+      RecipeScanner: 'recipe-scanner',
+      PointAndGenerate: 'point-and-generate',
+      RecipeResults: 'recipe-results',
+    },
+  },
+};
+
 function MainNavigator() {
   return (
     <Stack.Navigator
@@ -31,14 +63,14 @@ function MainNavigator() {
         headerTitleAlign: 'center',
       }}
     >
-      <Stack.Screen 
-        name='Splash' 
-        component={SplashScreen} 
+      <Stack.Screen
+        name='Splash'
+        component={SplashScreen}
         options={{ headerShown: false }}
       />
-      <Stack.Screen 
-        name='TabHome' 
-        component={TabNavigator} 
+      <Stack.Screen
+        name='TabHome'
+        component={TabNavigator}
         options={{ headerShown: false }}
       />
       <Stack.Screen name='Categories' component={CategoriesScreen}/>
@@ -52,20 +84,20 @@ function MainNavigator() {
       <Stack.Screen name='MealPlanner' component={MealPlannerScreen} options={{ title: 'Meal Planner' }} />
       <Stack.Screen name='Recommendations' component={RecommendationsScreen} options={{ title: 'For You' }} />
       <Stack.Screen name='Home' component={HomeScreen} />
-      <Stack.Screen 
-        name='RecipeScanner' 
-        component={RecipeScannerScreen} 
-        options={{ headerShown: false }} 
+      <Stack.Screen
+        name='RecipeScanner'
+        component={RecipeScannerScreen}
+        options={{ headerShown: false }}
       />
-      <Stack.Screen 
-        name='PointAndGenerate' 
-        component={PointAndGenerateScreen} 
-        options={{ headerShown: false }} 
+      <Stack.Screen
+        name='PointAndGenerate'
+        component={PointAndGenerateScreen}
+        options={{ headerShown: false }}
       />
-      <Stack.Screen 
-        name='RecipeResults' 
-        component={RecipeResultsScreen} 
-        options={{ headerShown: false }} 
+      <Stack.Screen
+        name='RecipeResults'
+        component={RecipeResultsScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
@@ -73,7 +105,7 @@ function MainNavigator() {
 
 export default function AppContainer() {
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <MainNavigator />
     </NavigationContainer>
   );

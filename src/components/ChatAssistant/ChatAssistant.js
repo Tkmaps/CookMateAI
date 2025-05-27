@@ -24,6 +24,8 @@ import {
 } from '@gluestack-ui/themed';
 import { Modal } from 'react-native';
 import { chatWithGemini, formatChatHistory } from '../../services/GeminiService';
+import Voice from '@react-native-community/voice';
+import Tts from 'react-native-tts';
 
 const suggestedPrompts = [
   { id: 1, name: 'Meal plan for the week', color: 'blue' },
@@ -47,6 +49,10 @@ const ChatAssistant = ({ isVisible, onClose, userName = "John Jonson" }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedText, setRecordedText] = useState('');
+  const [recordingError, setRecordingError] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -57,6 +63,47 @@ const ChatAssistant = ({ isVisible, onClose, userName = "John Jonson" }) => {
       setIsLoading(false);
     }
   }, [isVisible]);
+
+  useEffect(() => {
+    // Voice listeners
+    Voice.onSpeechResults = (e) => {
+      if (e.value && e.value.length > 0) {
+        setRecordedText(e.value[0]);
+        setInput(e.value[0]); // Also set the main input state
+        setIsRecording(false); // Stop recording automatically after result
+      }
+    };
+    Voice.onSpeechError = (e) => {
+      setRecordingError(e.error ? JSON.stringify(e.error) : 'An error occurred during recording.');
+      setIsRecording(false); // Stop recording on error
+    };
+    Voice.onSpeechEnd = (e) => {
+      setIsRecording(false); // Ensure recording state is false when speech ends
+    };
+
+    // Tts listeners
+    Tts.addEventListener('tts-start', (event) => setIsSpeaking(true));
+    Tts.addEventListener('tts-finish', (event) => setIsSpeaking(false));
+    Tts.addEventListener('tts-cancel', (event) => setIsSpeaking(false));
+    Tts.addEventListener('tts-error', (event) => {
+      console.error('TTS Error:', event);
+      setIsSpeaking(false);
+      // Optionally display a TTS error to the user
+    });
+
+    // Clean up listeners on component unmount
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+      Tts.removeEventListener('tts-start');
+      Tts.removeEventListener('tts-finish');
+      Tts.removeEventListener('tts-cancel');
+      Tts.removeEventListener('tts-error');
+    };
+  }, []); // Empty dependency array to run effect only once on mount
+
+  const speakText = (text) => {
+    Tts.speak(text);
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -91,6 +138,7 @@ const ChatAssistant = ({ isVisible, onClose, userName = "John Jonson" }) => {
       };
       
       setMessages(prev => [...prev, assistantMessage]);
+      speakText(result.text); // Speak the assistant's response
       
       // Update chat history for context
       setChatHistory(result.history);
@@ -116,6 +164,26 @@ const ChatAssistant = ({ isVisible, onClose, userName = "John Jonson" }) => {
       lightblue: { bg: '$sky100', text: '$sky600' },
     };
     return colorMap[color] || { bg: '$gray100', text: '$gray600' };
+  };
+
+  const toggleRecording = async () => {
+    try {
+      if (isRecording) {
+        // Stop recording
+        await Voice.stop();
+        setIsRecording(false);
+      } else {
+        // Start recording
+        setRecordedText(''); // Clear previous recorded text
+        setRecordingError(''); // Clear previous error
+        await Voice.start('en-US'); // Or the appropriate locale
+        setIsRecording(true);
+      }
+    } catch (err) {
+      console.error('Error toggling recording:', err);
+      setRecordingError('Sorry, I had trouble with the microphone. Please try again.');
+      setIsRecording(false); // Ensure recording state is false on error
+    }
   };
 
   return (
@@ -287,12 +355,16 @@ const ChatAssistant = ({ isVisible, onClose, userName = "John Jonson" }) => {
             <Pressable
               p="$2.5"
               borderRadius="$full"
-              bg={input.trim() ? "$primary500" : "$gray300"}
-              onPress={handleSend}
-              disabled={!input.trim() || isLoading}
-              opacity={!input.trim() || isLoading ? 0.5 : 1}
+              bg={input.trim() || isRecording ? "$primary500" : "$gray300"}
+              onPress={input.trim() ? handleSend : toggleRecording}
+              disabled={isLoading}
+              opacity={isLoading ? 0.5 : 1}
             >
-              <Icon as={AddIcon} size="md" color="$white" />
+              <Icon 
+                as={input.trim() || isRecording ? AddIcon : MicIcon} 
+                size="md" 
+                color="$white" 
+              />
             </Pressable>
           </HStack>
         </Box>

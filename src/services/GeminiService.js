@@ -1,42 +1,33 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// src/services/GeminiService.js
+// This file will now act as an intermediary to the AI Assistant Backend
 
-// Replace with your actual API key from Google AI Studio
-const API_KEY = 'YOUR_GEMINI_API_KEY';
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-// Model names
-const TEXT_MODEL = 'gemini-2.0-flash';
-const LIVE_MODEL = 'gemini-2.0-flash-live-001';
+const AI_ASSISTANT_BASE_URL = 'http://localhost:3000/api'; // Placeholder: Update with your AI Assistant Backend URL
 
 /**
- * Service to handle chat interactions with Gemini
+ * Service to handle chat interactions with the AI Assistant Backend
  */
 export const chatWithGemini = async (prompt, history = []) => {
   try {
-    // For safer implementation, get the model
-    const model = genAI.getGenerativeModel({ model: TEXT_MODEL });
-    
-    // Start a chat session
-    const chat = model.startChat({
-      history: history,
-      generationConfig: {
-        temperature: 0.5,
-        topK: 32,
-        topP: 0.95,
-        maxOutputTokens: 1024,
+    const response = await fetch(`${AI_ASSISTANT_BASE_URL}/coach/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ prompt, history }),
     });
-    
-    // Send message and get response
-    const result = await chat.sendMessage(prompt);
-    const response = await result.response;
-    
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to chat with AI Assistant');
+    }
+
+    const data = await response.json();
     return {
-      text: response.text(),
-      history: [...history, { role: 'user', parts: [{ text: prompt }] }, { role: 'model', parts: [{ text: response.text() }] }]
+      text: data.response,
+      history: data.history || [...history, { role: 'user', parts: [{ text: prompt }] }, { role: 'model', parts: [{ text: data.response }] }]
     };
   } catch (error) {
-    console.error('Error chatting with Gemini:', error);
+    console.error('Error chatting with AI Assistant:', error);
     return {
       text: "I'm sorry, I encountered an error processing your request. Please try again.",
       history: history
@@ -45,19 +36,25 @@ export const chatWithGemini = async (prompt, history = []) => {
 };
 
 /**
- * Service to handle recipe-focused chat with cooking context
+ * Service to handle recipe-focused chat with cooking context via AI Assistant Backend
  */
 export const askCookingQuestion = async (question) => {
   try {
-    const model = genAI.getGenerativeModel({ model: TEXT_MODEL });
-    
-    // Add cooking context
-    const prompt = `As a cooking assistant for the CookMate AI app, please answer the following question about cooking, recipes, ingredients, or food preparation: ${question}`;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    
-    return response.text();
+    const response = await fetch(`${AI_ASSISTANT_BASE_URL}/coach/cooking-question`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to ask cooking question to AI Assistant');
+    }
+
+    const data = await response.json();
+    return data.response;
   } catch (error) {
     console.error('Error asking cooking question:', error);
     return "I'm sorry, I encountered an error processing your cooking question. Please try again.";
@@ -65,47 +62,25 @@ export const askCookingQuestion = async (question) => {
 };
 
 /**
- * Service to generate recipes based on ingredients
+ * Service to generate recipes based on ingredients via AI Assistant Backend
  */
 export const generateRecipesFromIngredients = async (ingredients) => {
   try {
-    const model = genAI.getGenerativeModel({ model: TEXT_MODEL });
-    
-    // Format ingredients list
-    const ingredientsList = ingredients.map(i => i.name).join(', ');
-    
-    // Create prompt for recipe generation
-    const prompt = `Generate 5 creative and detailed recipes using some or all of the following ingredients: ${ingredientsList}. 
-    
-    For each recipe, provide:
-    1. A creative title
-    2. A list of all ingredients with measurements
-    3. Step by step cooking instructions
-    4. Estimated cooking time
-    5. Cuisine type
-    
-    Format as JSON with the following structure:
-    [
-      {
-        "title": "Recipe Title",
-        "ingredients": ["1 cup ingredient1", "2 tbsp ingredient2", ...],
-        "instructions": ["Step 1: Do this", "Step 2: Do that", ...],
-        "cookingTime": "30 minutes",
-        "cuisine": "Italian"
+    const response = await fetch(`${AI_ASSISTANT_BASE_URL}/coach/generate-recipes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      ...
-    ]`;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    
-    // Parse JSON response
-    try {
-      return JSON.parse(response.text());
-    } catch (jsonError) {
-      console.error('Error parsing JSON from Gemini:', jsonError);
-      return [];
+      body: JSON.stringify({ ingredients }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to generate recipes with AI Assistant');
     }
+
+    const data = await response.json();
+    return data.recipes;
   } catch (error) {
     console.error('Error generating recipes:', error);
     return [];
@@ -113,22 +88,24 @@ export const generateRecipesFromIngredients = async (ingredients) => {
 };
 
 /**
- * Utility function to prepare a system prompt for Gemini
+ * Utility function to prepare a system prompt for the AI Assistant (if needed by backend)
  */
 export const createCookingAssistantPrompt = () => {
-  return `You are CookMate AI, a helpful cooking assistant in a recipe app. 
-  Your expertise is in recipes, cooking techniques, ingredient substitutions, and meal planning. 
-  Keep responses focused on cooking, food, and nutrition. 
+  // This prompt might be handled by the backend, but keeping it for consistency or future client-side use
+  return `You are CookMate AI, a helpful cooking assistant in a recipe app.
+  Your expertise is in recipes, cooking techniques, ingredient substitutions, and meal planning.
+  Keep responses focused on cooking, food, and nutrition.
   If asked about non-cooking topics, gently redirect the conversation back to food-related topics.
   Be concise, practical, and friendly.`;
 };
 
 /**
- * Format chat history for Gemini API
+ * Format chat history for AI Assistant Backend (if needed)
  */
 export const formatChatHistory = (messages) => {
+  // The backend might expect a different format, adjust as necessary
   return messages.map(msg => ({
     role: msg.sender === 'user' ? 'user' : 'model',
-    parts: [{ text: msg.message }]
+    content: msg.message // Assuming backend expects 'content' instead of 'parts'
   }));
-}; 
+};

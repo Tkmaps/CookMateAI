@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   VStack,
@@ -9,6 +9,17 @@ import {
   HStack,
   Pressable,
   Circle,
+  Select,
+  SelectTrigger,
+  SelectInput,
+  SelectIcon,
+  SelectPortal,
+  SelectBackdrop,
+  SelectContent,
+  SelectDragIndicator,
+  SelectDragIndicatorWrapper,
+  SelectItem,
+  ChevronDownIcon
 } from "@gluestack-ui/themed";
 import { LinearGradient } from "../../components/ui/linear-gradient";
 import { 
@@ -18,6 +29,8 @@ import {
   AlarmClockIcon,
   HelpCircleIcon
 } from "@gluestack-ui/themed";
+import Voice from '@react-native-community/voice';
+import Tts from 'react-native-tts';
 
 const exampleCommands = [
   { icon: AlarmClockIcon, text: "Set timer for 30 minutes" },
@@ -29,9 +42,55 @@ const exampleCommands = [
 export default function VoiceAssistantScreen({ navigation }) {
   const [isListening, setIsListening] = useState(true);
   const [pulseAnimation, setPulseAnimation] = useState(true);
+  const [recognizedText, setRecognizedText] = useState('');
+  const [error, setError] = useState('');
+  const [voices, setVoices] = useState([]);
+  const [selectedVoice, setSelectedVoice] = useState(null);
 
   const toggleListening = () => {
     setIsListening(!isListening);
+  };
+
+  useEffect(() => {
+    Tts.getVoices().then(availableVoices => {
+      const filteredVoices = availableVoices.filter(v => !v.notInstalled && v.quality === 'improved' || v.quality === 'default');
+      setVoices(filteredVoices);
+      if (filteredVoices.length > 0) {
+        setSelectedVoice(filteredVoices[0].id);
+      }
+    });
+
+    Voice.onSpeechResults = (e) => {
+      if (e.value && e.value.length > 0) {
+        setRecognizedText(e.value[0]);
+      }
+    };
+    Voice.onSpeechError = (e) => {
+      setError(e.error ? JSON.stringify(e.error) : 'An error occurred');
+    };
+
+    if (isListening) {
+      Voice.start('en-US'); // Or the appropriate locale
+    } else {
+      Voice.stop();
+    }
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
+  }, [isListening]);
+
+  useEffect(() => {
+    if (recognizedText) {
+      speakText(`You said: ${recognizedText}`);
+    }
+  }, [recognizedText]);
+
+  const speakText = (text) => {
+    if (selectedVoice) {
+      Tts.setDefaultVoice(selectedVoice);
+    }
+    Tts.speak(text);
   };
 
   return (
@@ -118,8 +177,50 @@ export default function VoiceAssistantScreen({ navigation }) {
                 ? "Speak now. I'm ready to help with your cooking questions." 
                 : "Tap the mic to start listening again."}
             </Text>
+            {recognizedText ? (
+              <Text color="$blue500" mt="$2" textAlign="center">
+                Recognized: {recognizedText}
+              </Text>
+            ) : null}
+            {error ? (
+              <Text color="$red500" mt="$2" textAlign="center">
+                Error: {error}
+              </Text>
+            ) : null}
           </Center>
         </Box>
+
+        {/* Voice Selection */}
+        {voices.length > 0 && (
+          <Box width="100%" mb="$5">
+            <Text color="$gray700" mb="$2">Select Voice:</Text>
+            <Select 
+              selectedValue={selectedVoice}
+              onValueChange={(itemValue) => {
+                setSelectedVoice(itemValue);
+                Tts.requestInstallData(); // Prompt to install voice data if needed
+              }}
+            >
+              <SelectTrigger variant="outline" size="md" >
+                <SelectInput placeholder="Choose Voice" />
+                <SelectIcon mr="$3">
+                  <Icon as={ChevronDownIcon} />
+                </SelectIcon>
+              </SelectTrigger>
+              <SelectPortal>
+                <SelectBackdrop />
+                <SelectContent>
+                  <SelectDragIndicatorWrapper>
+                    <SelectDragIndicator />
+                  </SelectDragIndicatorWrapper>
+                  {voices.map(voice => (
+                    <SelectItem key={voice.id} label={`${voice.name} (${voice.language})`} value={voice.id} />
+                  ))}
+                </SelectContent>
+              </SelectPortal>
+            </Select>
+          </Box>
+        )}
 
         {/* Example Commands */}
         <Box width="100%">
